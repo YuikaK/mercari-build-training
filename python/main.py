@@ -94,9 +94,9 @@ async def add_item(
 @app.get("/items")
 async def get_items():
     if not items_json_path.exists():
-        return {"items": []}  # 空のリストを返す
+        return {"items": []}  # Return empty list
 
-    # JSONファイルを読み込む
+    # Read JSON files
     with open(items_json_path, "r") as f:
         data = json.load(f)
 
@@ -123,13 +123,13 @@ async def get_item(item_id: int = Path(..., title="Item ID", description="The in
     if not items_json_path.exists():
         raise HTTPException(status_code=404, detail="No items found")
 
-    # JSONファイルを読み込む
+    # Read JSON files
     with open(items_json_path, "r") as f:
         data = json.load(f)
 
     items = data.get("items", [])
     
-    # item_id は1-basedなので、リストのインデックスに変換
+    # Since item_id is 1-based, it is converted to an index of the listing
     index = item_id - 1
 
     if index < 0 or index >= len(items):
