@@ -34,8 +34,7 @@ def setup_database():
         with sqlite3.connect(db) as conn:
             with open(pathlib.Path(__file__).parent / "db/items.sql", "r") as f:
                 conn.executescript(f.read())  # Execute SQL script to create tables
-    else:
-        pass
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -88,8 +87,7 @@ async def add_item(
         # If category not found, insert new category
         cursor.execute("INSERT INTO categories (category) VALUES (?)", (category,))
         db.commit()
-        cursor.execute("SELECT id FROM categories WHERE category = ?", (category,))
-        category_row = cursor.fetchone()
+        category_id = cursor.lastrowid 
 
     category_id = category_row["id"]
     
@@ -167,7 +165,7 @@ async def get_item(
 ):
     cursor = db.cursor()
     try:
-        cursor.execute("SELECT name, category, image_name FROM items WHERE id = ?", (item_id,))
+        cursor.execute("SELECT name, category_id, image_name FROM items WHERE id = ?", (item_id,))
         row = cursor.fetchone()
         if row is None:
             raise HTTPException(status_code=404, detail="Item not found")
