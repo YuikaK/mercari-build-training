@@ -184,7 +184,13 @@ async def search_items(keyword: str, db: sqlite3.Connection = Depends(get_db)):
     cursor = db.cursor()
     try:
        # SQL query to find products with keyword in name
-        cursor.execute("SELECT name, category FROM items WHERE name LIKE ?", ('%' + keyword + '%',))
+        cursor.execute("""
+            SELECT items.name, categories.category
+            FROM items
+            JOIN categories ON items.category_id = categories.id
+            WHERE items.name LIKE ?
+        """, ('%' + keyword + '%',))
+        
         items = [
             {"name": row["name"], "category": row["category"]}
             for row in cursor.fetchall()
@@ -195,4 +201,3 @@ async def search_items(keyword: str, db: sqlite3.Connection = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
     finally:
         cursor.close()
-
