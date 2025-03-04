@@ -1,18 +1,21 @@
 import os
 import logging
 import pathlib
-from fastapi import FastAPI, Form, HTTPException, Depends
+from fastapi import FastAPI, Form, HTTPException, Depends, File, UploadFile, Path
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 import sqlite3
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
-
+import json
+import hashlib
 
 # Define the path to the images & sqlite3 database
 images = pathlib.Path(__file__).parent.resolve() / "images"
 db = pathlib.Path(__file__).parent.resolve() / "db" / "mercari.sqlite3"
+items_json_path = pathlib.Path(__file__).parent.resolve() / "items.json"
 
+images.mkdir(parents=True, exist_ok=True)
 
 def get_db():
     if not db.exists():
@@ -25,23 +28,20 @@ def get_db():
     finally:
         conn.close()
 
-
 # STEP 5-1: set up the database connection
 def setup_database():
     pass
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     setup_database()
     yield
 
-
 app = FastAPI(lifespan=lifespan)
 
 logger = logging.getLogger("uvicorn")
-logger.level = logging.INFO
-images = pathlib.Path(__file__).parent.resolve() / "images"
+logger.level = logging.DEBUG #4-6's DEBUG
+#images = pathlib.Path(__file__).parent.resolve() / "images"
 origins = [os.environ.get("FRONT_URL", "http://localhost:3000")]
 app.add_middleware(
     CORSMiddleware,
@@ -51,32 +51,56 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 class HelloResponse(BaseModel):
     message: str
-
 
 @app.get("/", response_model=HelloResponse)
 def hello():
     return HelloResponse(**{"message": "Hello, world!"})
 
-
 class AddItemResponse(BaseModel):
     message: str
 
-
 # add_item is a handler to add a new item for POST /items .
 @app.post("/items", response_model=AddItemResponse)
-def add_item(
+async def add_item(
     name: str = Form(...),
-    db: sqlite3.Connection = Depends(get_db),
+    category: str = Form(...),
+    image: UploadFile = File(...),
 ):
     if not name:
         raise HTTPException(status_code=400, detail="name is required")
+    if not category:
+        raise HTTPException(status_code=400, detail="category is required")
+    
+    # Read the file content and generate SHA-256 hash
+    image_bytes = await image.read()
+    image_hash = hashlib.sha256(image_bytes).hexdigest()
+    image_name = f"{image_hash}.jpg"
+    image_path = images / image_name
 
-    insert_item(Item(name=name, category=category))
-    return AddItemResponse(**{"message": f"item received: {name}"})
+    # Save the image
+    with open(image_path, "wb") as img_file:
+        img_file.write(image_bytes)
 
+    # Save item details to items.json
+    item_data = Item(name=name, category=category, image_name=image_name)
+    insert_item(item_data)
+
+    #insert_item(Item(name=name, category=category))
+    return AddItemResponse(**{"message": f"item received: {name}, category: {category}, image: {image_name}"})
+
+# get_items is a handler to get a new item for POST /items .
+@app.get("/items")
+async def get_items():
+    if not items_json_path.exists():
+        return {"items": []}  # Return empty list
+
+    # Read JSON files
+    with open(items_json_path, "r") as f:
+        data = json.load(f)
+
+    return data
 
 # get_image is a handler to return an image for GET /images/{filename} .
 @app.get("/image/{image_name}")
@@ -93,11 +117,49 @@ async def get_image(image_name):
 
     return FileResponse(image)
 
+# get_item is a handler to return information about the item_id-th item for GET /items/<item_id>
+@app.get("/items/{item_id}")
+async def get_item(item_id: int = Path(..., title="Item ID", description="The index of the item (1-based)")):
+    if not items_json_path.exists():
+        raise HTTPException(status_code=404, detail="No items found")
+
+    # Read JSON files
+    with open(items_json_path, "r") as f:
+        data = json.load(f)
+
+    items = data.get("items", [])
+    
+    # Since item_id is 1-based, it is converted to an index of the listing
+    index = item_id - 1
+
+    if index < 0 or index >= len(items):
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    return items[index]
 
 class Item(BaseModel):
     name: str
-
+    category: str
+    image_name: str
 
 def insert_item(item: Item):
-    # STEP 4-1: add an implementation to store an item
+    # Check if items.json exists
+    if not items_json_path.exists():
+        with open(items_json_path, "w") as f:
+            json.dump({"items": []}, f, indent=2)
+
+     # Load the existing JSON data
+    with open(items_json_path, "r") as f:
+        data = json.load(f)
+
+    # Append new item
+    data["items"].append({
+        "name": item.name,
+        "category": item.category,
+        "image_name": item.image_name
+    })
+
+    # Write back to items.json
+    with open(items_json_path, "w") as f:
+        json.dump(data, f, indent=2)
     pass

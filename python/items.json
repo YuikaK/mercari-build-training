@@ -1,0 +1,21 @@
+{
+  "items": [
+    {
+      "name": "jacket",
+      "category": "clothing"
+    },
+    {
+      "name": "Dress",
+      "category": "fashion"
+    },
+    {
+      "name": "jacket",
+      "category": "fashion"
+    },
+    {
+      "name": "jacket",
+      "category": "fashion",
+      "image_name": "28c2877a836a2edac6827c981a33099cd8f9ea468ffec6950f7197af856dfbbb.jpg"
+    }
+  ]
+}
