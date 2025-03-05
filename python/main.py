@@ -88,8 +88,8 @@ async def add_item(
         cursor.execute("INSERT INTO categories (category) VALUES (?)", (category,))
         db.commit()
         category_id = cursor.lastrowid 
-
-    category_id = category_row["id"]
+    else:
+        category_id = category_row[0] # Since the position at which 'id' is returned is index 0
     
     image_bytes = await image.read()
     image_hash = hashlib.sha256(image_bytes).hexdigest()
