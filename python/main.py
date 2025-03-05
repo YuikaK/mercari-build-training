@@ -124,7 +124,7 @@ def insert_item(item: Item, db_conn: sqlite3.Connection):
 async def get_items(db: sqlite3.Connection = Depends(get_db)):
     cursor = db.cursor()
     try:
-        # SQLクエリでitemsとcategoriesをJOINして、category名を取得
+        # JOIN items and categories in SQL query to get category names
         cursor.execute("""
             SELECT items.id, items.name, categories.id AS category_id, categories.category, items.image_name
             FROM items
