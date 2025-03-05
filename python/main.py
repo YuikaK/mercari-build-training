@@ -13,7 +13,6 @@ import hashlib
 # Define the path to the images & sqlite3 database
 images = pathlib.Path(__file__).parent.resolve() / "images"
 db = pathlib.Path(__file__).parent.resolve() / "db" / "mercari.sqlite3"
-items_json_path = pathlib.Path(__file__).parent.resolve() / "items.json"
 
 images.mkdir(parents=True, exist_ok=True)
 
@@ -89,8 +88,8 @@ async def add_item(
         db.commit()
         category_id = cursor.lastrowid 
     else:
-        category_id = category_row[0] # Since the position at which 'id' is returned is index 0
-    
+        category_id = category_row["id"] 
+
     image_bytes = await image.read()
     image_hash = hashlib.sha256(image_bytes).hexdigest()
     image_name = f"{image_hash}.jpg"
@@ -127,12 +126,12 @@ async def get_items(db: sqlite3.Connection = Depends(get_db)):
     try:
         # SQLクエリでitemsとcategoriesをJOINして、category名を取得
         cursor.execute("""
-            SELECT items.id, items.name, categories.category AS category, items.image_name
+            SELECT items.id, items.name, categories.id AS category_id, categories.category, items.image_name
             FROM items
             JOIN categories ON items.category_id = categories.id
         """)
         items = [
-            {"id": row["id"], "name": row["name"], "category": row["category"], "image_name": row["image_name"]}
+             {"id": row["id"], "name": row["name"], "category_id": row["category_id"], "category": row["category"], "image_name": row["image_name"]}
             for row in cursor.fetchall()
         ]
         return {"items": items}
@@ -165,11 +164,16 @@ async def get_item(
 ):
     cursor = db.cursor()
     try:
-        cursor.execute("SELECT name, category_id, image_name FROM items WHERE id = ?", (item_id,))
+        cursor.execute("""
+        SELECT items.name, categories.id AS category_id, items.image_name
+            FROM items
+            JOIN categories ON items.category_id = categories.id
+            WHERE items.id = ?
+            """, (item_id,))
         row = cursor.fetchone()
         if row is None:
             raise HTTPException(status_code=404, detail="Item not found")
-        return {"name": row["name"], "category": row["category"], "image_name": row["image_name"]}
+        return {"name": row["name"], "category_id": row["category_id"], "image_name": row["image_name"]}
     except sqlite3.Error as e:
         logger.error(f"Database error: {e}")
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
@@ -183,14 +187,14 @@ async def search_items(keyword: str, db: sqlite3.Connection = Depends(get_db)):
     try:
        # SQL query to find products with keyword in name
         cursor.execute("""
-            SELECT items.name, categories.category
+            SELECT items.name, categories.id AS category_id, categories.category
             FROM items
             JOIN categories ON items.category_id = categories.id
             WHERE items.name LIKE ?
         """, ('%' + keyword + '%',))
         
         items = [
-            {"name": row["name"], "category": row["category"]}
+            {"name": row["name"], "category_id": row["category_id"], "category": row["category"]}
             for row in cursor.fetchall()
         ]
         return {"items": items}
