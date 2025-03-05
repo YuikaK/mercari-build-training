@@ -4,10 +4,11 @@ FROM python:3.12-alpine
 WORKDIR /app
 
 # sqlite package
-RUN apk add --no-cache python3 py3-pip sqlite
+RUN apk add --no-cache sqlite
 
 # install library
-RUN pip install --no-cache-dir fastapi uvicorn python-multipart
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
 # copy the source code of app
 COPY . .
