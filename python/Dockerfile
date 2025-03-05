@@ -1,8 +1,17 @@
-FROM alpine
+FROM python:3.12-alpine
 
-RUN addgroup -S mercari && adduser -S trainee -G mercari
-# RUN chown -R trainee:mercari /path/to/db
+# setting working directory
+WORKDIR /app
 
-USER trainee
+# sqlite package
+RUN apk add --no-cache python3 py3-pip sqlite
 
-CMD ["python", "-V"]
+# install library
+RUN pip install --no-cache-dir fastapi uvicorn python-multipart
+
+# copy the source code of app
+COPY . .
+
+EXPOSE 9000
+
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "9000"]
