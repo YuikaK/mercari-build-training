@@ -13,7 +13,6 @@ import hashlib
 # Define the path to the images & sqlite3 database
 images = pathlib.Path(__file__).parent.resolve() / "images"
 db = pathlib.Path(__file__).parent.resolve() / "db" / "mercari.sqlite3"
-items_json_path = pathlib.Path(__file__).parent.resolve() / "items.json"
 
 images.mkdir(parents=True, exist_ok=True)
 
@@ -21,7 +20,7 @@ def get_db():
     if not db.exists():
         yield
 
-    conn = sqlite3.connect(db)
+    conn = sqlite3.connect(db, check_same_thread=False)
     conn.row_factory = sqlite3.Row  # Return rows as dictionaries
     try:
         yield conn
@@ -30,7 +29,11 @@ def get_db():
 
 # STEP 5-1: set up the database connection
 def setup_database():
-    pass
+    if not db.exists():
+        with sqlite3.connect(db) as conn:
+            with open(pathlib.Path(__file__).parent / "db/items.sql", "r") as f:
+                conn.executescript(f.read())  # Execute SQL script to create tables
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -67,40 +70,76 @@ async def add_item(
     name: str = Form(...),
     category: str = Form(...),
     image: UploadFile = File(...),
+    db: sqlite3.Connection = Depends(get_db)
 ):
     if not name:
         raise HTTPException(status_code=400, detail="name is required")
     if not category:
         raise HTTPException(status_code=400, detail="category is required")
     
-    # Read the file content and generate SHA-256 hash
+    # Get category ID, or insert if not found
+    cursor = db.cursor()
+    cursor.execute("SELECT id FROM categories WHERE category = ?", (category,))
+    category_row = cursor.fetchone()
+    
+    if category_row is None:
+        # If category not found, insert new category
+        cursor.execute("INSERT INTO categories (category) VALUES (?)", (category,))
+        db.commit()
+        category_id = cursor.lastrowid 
+    else:
+        category_id = category_row["id"] 
+
     image_bytes = await image.read()
     image_hash = hashlib.sha256(image_bytes).hexdigest()
     image_name = f"{image_hash}.jpg"
     image_path = images / image_name
 
-    # Save the image
+    # Save image
     with open(image_path, "wb") as img_file:
         img_file.write(image_bytes)
 
-    # Save item details to items.json
-    item_data = Item(name=name, category=category, image_name=image_name)
-    insert_item(item_data)
+    # Insert new product into items table
+    item = Item(name=name, category_id=category_id, image_name=image_name)
+    insert_item(item, db)
 
-    #insert_item(Item(name=name, category=category))
     return AddItemResponse(**{"message": f"item received: {name}, category: {category}, image: {image_name}"})
+
+# Fixed data model for adding items
+class Item(BaseModel):
+    name: str
+    category_id: int
+    image_name: str
+
+def insert_item(item: Item, db_conn: sqlite3.Connection):
+    db_conn.cursor().execute(
+        "INSERT INTO items (name, category_id, image_name) VALUES (?, ?, ?)",
+        (item.name, item.category_id, item.image_name)
+        )
+    db_conn.commit()
+
 
 # get_items is a handler to get a new item for POST /items .
 @app.get("/items")
-async def get_items():
-    if not items_json_path.exists():
-        return {"items": []}  # Return empty list
-
-    # Read JSON files
-    with open(items_json_path, "r") as f:
-        data = json.load(f)
-
-    return data
+async def get_items(db: sqlite3.Connection = Depends(get_db)):
+    cursor = db.cursor()
+    try:
+        # SQLクエリでitemsとcategoriesをJOINして、category名を取得
+        cursor.execute("""
+            SELECT items.id, items.name, categories.id AS category_id, categories.category, items.image_name
+            FROM items
+            JOIN categories ON items.category_id = categories.id
+        """)
+        items = [
+             {"id": row["id"], "name": row["name"], "category_id": row["category_id"], "category": row["category"], "image_name": row["image_name"]}
+            for row in cursor.fetchall()
+        ]
+        return {"items": items}
+    except sqlite3.Error as e:
+        logger.error(f"Database error: {e}")
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    finally:
+        cursor.close()
 
 # get_image is a handler to return an image for GET /images/{filename} .
 @app.get("/image/{image_name}")
@@ -119,47 +158,48 @@ async def get_image(image_name):
 
 # get_item is a handler to return information about the item_id-th item for GET /items/<item_id>
 @app.get("/items/{item_id}")
-async def get_item(item_id: int = Path(..., title="Item ID", description="The index of the item (1-based)")):
-    if not items_json_path.exists():
-        raise HTTPException(status_code=404, detail="No items found")
+async def get_item(
+    item_id: int = Path(..., title="Item ID", description="Unique item ID"),
+    db: sqlite3.Connection = Depends(get_db)
+):
+    cursor = db.cursor()
+    try:
+        cursor.execute("""
+        SELECT items.name, categories.id AS category_id, items.image_name
+            FROM items
+            JOIN categories ON items.category_id = categories.id
+            WHERE items.id = ?
+            """, (item_id,))
+        row = cursor.fetchone()
+        if row is None:
+            raise HTTPException(status_code=404, detail="Item not found")
+        return {"name": row["name"], "category_id": row["category_id"], "image_name": row["image_name"]}
+    except sqlite3.Error as e:
+        logger.error(f"Database error: {e}")
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    finally:
+        cursor.close()
 
-    # Read JSON files
-    with open(items_json_path, "r") as f:
-        data = json.load(f)
-
-    items = data.get("items", [])
-    
-    # Since item_id is 1-based, it is converted to an index of the listing
-    index = item_id - 1
-
-    if index < 0 or index >= len(items):
-        raise HTTPException(status_code=404, detail="Item not found")
-
-    return items[index]
-
-class Item(BaseModel):
-    name: str
-    category: str
-    image_name: str
-
-def insert_item(item: Item):
-    # Check if items.json exists
-    if not items_json_path.exists():
-        with open(items_json_path, "w") as f:
-            json.dump({"items": []}, f, indent=2)
-
-     # Load the existing JSON data
-    with open(items_json_path, "r") as f:
-        data = json.load(f)
-
-    # Append new item
-    data["items"].append({
-        "name": item.name,
-        "category": item.category,
-        "image_name": item.image_name
-    })
-
-    # Write back to items.json
-    with open(items_json_path, "w") as f:
-        json.dump(data, f, indent=2)
-    pass
+#5-2
+@app.get("/search")
+async def search_items(keyword: str, db: sqlite3.Connection = Depends(get_db)):
+    cursor = db.cursor()
+    try:
+       # SQL query to find products with keyword in name
+        cursor.execute("""
+            SELECT items.name, categories.id AS category_id, categories.category
+            FROM items
+            JOIN categories ON items.category_id = categories.id
+            WHERE items.name LIKE ?
+        """, ('%' + keyword + '%',))
+        
+        items = [
+            {"name": row["name"], "category_id": row["category_id"], "category": row["category"]}
+            for row in cursor.fetchall()
+        ]
+        return {"items": items}
+    except sqlite3.Error as e:
+        logger.error(f"Database error: {e}")
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    finally:
+        cursor.close()
