@@ -29,21 +29,21 @@ export const ItemList = ({ reload, onLoadCompleted }: Prop) => {
   }, [reload, onLoadCompleted]);
 
   return (
-    <div>
-      {items.map((item) => {
-        return (
-          <div key={item.id} className="ItemList">
-            {/* TODO: Task 2: Show item images */}
-            <img src={`http://localhost:9000/image/${item.image_name}`}
-              alt={item.name} />
-            <p>
-              <span>Name: {item.name}</span>
-              <br />
-              <span>Category: {item.category}</span>
-            </p>
-          </div>
-        );
-      })}
-    </div>
+    <div className="ItemList">
+    {items.map((item) => (
+      <div key={item.id}>
+        <img 
+          src={`http://localhost:9000/image/${item.image_name}`} 
+          alt={item.name} 
+          className="ItemImage"
+        />
+        <p className="ItemDetails">
+          <span>Name: {item.name}</span>
+          <br />
+          <span>Category: {item.category}</span>
+        </p>
+      </div>
+    ))}
+  </div>
   );
 };
