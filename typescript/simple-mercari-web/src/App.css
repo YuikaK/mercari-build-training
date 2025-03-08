@@ -26,13 +26,23 @@
 
 .ItemList {
   background-color: #222427;
-  min-height: 8vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: left;
-  font-size: calc(10px + 1vmin);
+  display: grid; /* http://developer.mozilla.org/ja/docs/Web/CSS/CSS_grid_layout/Basic_concepts_of_grid_layout */
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); 
+  gap: 16px; /* Gaps between items */
+  padding: 16px; 
+  text-align: center;
   color: white;
+}
+
+.ItemList img {
+  width: 200px;
+  height: 200px; 
+  object-fit: cover;
+}
+
+.ItemList span {
+  display: block;
+  font-size: 14px;
 }
 
 .App-link {

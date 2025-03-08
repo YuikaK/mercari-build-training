@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: ./typescript/simple-mercari-web
+      dockerfile: Dockerfile
+    environment:
+      - REACT_APP_API_URL=http://app:9000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - app
+    networks:
+      - mercari-network
+    command: ["npm", "start", "--", "--host", "0.0.0.0"]
+
+  app:
+    build:
+      context: ./python
+      dockerfile: Dockerfile
+    environment:
+      - FRONT_URL=http://localhost:3000 # web:3000 ×
+    ports:
+      - "9000:9000"
+    networks:
+      - mercari-network
+
+networks:
+  mercari-network:
+    driver: bridge
