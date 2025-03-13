@@ -1,5 +1,13 @@
 const SERVER_URL = import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:9000';
 
+export const fetchSearchResults = async (keyword: string) => {
+  const response = await fetch(`http://localhost:9000/search?keyword=${encodeURIComponent(keyword)}`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch search results');
+  }
+  return response.json();
+};
+
 export interface Item {
   id: number;
   name: string;
