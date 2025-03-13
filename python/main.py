@@ -181,21 +181,20 @@ async def get_item(
     finally:
         cursor.close()
 
-#5-2
+# 5-2
 @app.get("/search")
 async def search_items(keyword: str, db: sqlite3.Connection = Depends(get_db)):
     cursor = db.cursor()
     try:
-       # SQL query to find products with keyword in name
         cursor.execute("""
-            SELECT items.name, categories.id AS category_id, categories.category
+            SELECT items.name, categories.id AS category_id, categories.category, items.image_name
             FROM items
             JOIN categories ON items.category_id = categories.id
             WHERE items.name LIKE ?
         """, ('%' + keyword + '%',))
         
         items = [
-            {"name": row["name"], "category_id": row["category_id"], "category": row["category"]}
+            {"name": row["name"], "category_id": row["category_id"], "category": row["category"], "image_name": row["image_name"]}
             for row in cursor.fetchall()
         ]
         return {"items": items}
