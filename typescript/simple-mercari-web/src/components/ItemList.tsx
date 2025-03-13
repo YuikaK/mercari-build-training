@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Item, fetchItems } from '~/api';
 
-/*const PLACEHOLDER_IMAGE = import.meta.env.VITE_FRONTEND_URL + '/logo192.png';*/
-
 interface Prop {
-  reload: boolean;
-  onLoadCompleted: () => void;
+  reload: boolean; // add reload property
+  onLoadCompleted: () => void; // add onLoadCompleted proparty
+  searchQuery: string; // add searchQuery property
 }
 
-export const ItemList = ({ reload, onLoadCompleted }: Prop) => {
+export const ItemList = ({ reload, onLoadCompleted, searchQuery }: Prop) => {
   const [items, setItems] = useState<Item[]>([]);
+
   useEffect(() => {
     const fetchData = () => {
       fetchItems()
@@ -28,22 +28,27 @@ export const ItemList = ({ reload, onLoadCompleted }: Prop) => {
     }
   }, [reload, onLoadCompleted]);
 
+  // filtering items based on search query
+  const filteredItems = items.filter((item) =>
+    item.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div className="ItemList">
-    {items.map((item) => (
-      <div key={item.id}>
-        <img 
-          src={`http://localhost:9000/image/${item.image_name}`} 
-          alt={item.name} 
-          className="ItemImage"
-        />
-        <p className="ItemDetails">
-          <span>Name: {item.name}</span>
-          <br />
-          <span>Category: {item.category}</span>
-        </p>
-      </div>
-    ))}
-  </div>
+      {filteredItems.map((item) => (
+        <div key={item.id}>
+          <img 
+            src={`http://localhost:9000/image/${item.image_name}`} 
+            alt={item.name} 
+            className="ItemImage"
+          />
+          <p className="ItemDetails">
+            <span>Name: {item.name}</span>
+            <br />
+            <span>Category: {item.category}</span>
+          </p>
+        </div>
+      ))}
+    </div>
   );
 };
