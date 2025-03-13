@@ -3,6 +3,7 @@ import { postItem } from '~/api';
 
 interface Prop {
   onListingCompleted: () => void;
+  setSearchQuery: (query: string) => void; // receive setSearchQuery
 }
 
 type FormDataType = {
@@ -11,7 +12,7 @@ type FormDataType = {
   image: string | File;
 };
 
-export const Listing = ({ onListingCompleted }: Prop) => {
+export const Listing = ({ onListingCompleted, setSearchQuery }: Prop) => {
   const initialState = {
     name: '',
     category: '',
@@ -25,12 +26,14 @@ export const Listing = ({ onListingCompleted }: Prop) => {
       [event.target.name]: event.target.value,
     });
   };
+
   const onFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setValues({
       ...values,
       [event.target.name]: event.target.files![0],
     });
   };
+
   const onSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     postItem({
@@ -47,6 +50,7 @@ export const Listing = ({ onListingCompleted }: Prop) => {
         setValues(initialState);
       });
   };
+
   return (
     <div className="Listing">
       <form onSubmit={onSubmit}>
@@ -76,6 +80,14 @@ export const Listing = ({ onListingCompleted }: Prop) => {
           <button type="submit">List this item</button>
         </div>
       </form>
+
+      {/* search box */}
+      <input
+        type="text"
+        className="SearchBox"
+        placeholder="Search items..."
+        onChange={(e) => setSearchQuery(e.target.value)} // reload searchQuery
+      />
     </div>
   );
 };
