@@ -1,59 +1,110 @@
 .App {
+  width: 100vw; 
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
 }
 
 .Title {
-  background-color: #222427;
+  background: linear-gradient(135deg, #a88beb, #f8ceec);
   min-height: 8vh;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: left;
-  font-size: calc(10px + 1vmin);
+  justify-content: center;
+  font-size: calc(12px + 1vmin);
   color: white;
+  font-weight: bold;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.Listing, .ItemList {
+    width: 100vw; 
+    max-width: none; 
+    margin: 0 auto; 
 }
 
 .Listing {
-  background-color: #222427;
+  background: linear-gradient(135deg, #f8ceec, #a88beb);
   min-height: 8vh;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: left;
-  font-size: calc(10px + 1vmin);
+  justify-content: center;
+  font-size: calc(12px + 1vmin);
   color: white;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 .ItemList {
-  background-color: #222427;
-  display: grid; /* http://developer.mozilla.org/ja/docs/Web/CSS/CSS_grid_layout/Basic_concepts_of_grid_layout */
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); 
-  gap: 16px; /* Gaps between items */
-  padding: 16px; 
+  background-color: #f8f4fc;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  padding: 16px;
   text-align: center;
-  color: white;
+  color: #5a3e85;
 }
 
 .ItemList img {
   width: 200px;
-  height: 200px; 
+  height: 200px;
   object-fit: cover;
+  border-radius: 10px;
+  border: 2px solid #a88beb;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
 }
 
 .ItemList span {
   display: block;
-  font-size: 14px;
+  font-size: 16px;
+  font-weight: bold;
+  color: #5a3e85;
 }
 
-.App-link {
-  color: #61dafb;
+button {
+  background: linear-gradient(135deg, #a88beb, #f8ceec);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  font-size: 16px;
+  font-weight: bold;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+button:hover {
+  background: linear-gradient(135deg, #f8ceec, #a88beb);
+  transform: scale(1.05);
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100vh;
+}
+
+.SearchBox {
+  margin-top: 20px;
+  padding: 10px;
+  width: 80%;
+  max-width: 600px;
+  border-radius: 5px;
+  border: 2px solid #a88beb;
+  font-size: 16px;
+  outline: none;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.SearchBox:focus {
+  border-color: #f8ceec;
 }
