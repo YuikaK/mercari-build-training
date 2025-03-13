@@ -4,8 +4,9 @@ import { ItemList } from '~/components/ItemList';
 import { Listing } from '~/components/Listing';
 
 function App() {
-  // reload ItemList after Listing complete
   const [reload, setReload] = useState(true);
+  const [searchQuery, setSearchQuery] = useState(''); 
+
   return (
     <div>
       <header className="Title">
@@ -14,10 +15,17 @@ function App() {
         </p>
       </header>
       <div>
-        <Listing onListingCompleted={() => setReload(true)} />
+        <Listing
+          onListingCompleted={() => setReload(true)}
+          setSearchQuery={setSearchQuery} 
+        />
       </div>
       <div>
-        <ItemList reload={reload} onLoadCompleted={() => setReload(false)} />
+        <ItemList
+          reload={reload}
+          onLoadCompleted={() => setReload(false)}
+          searchQuery={searchQuery} // searchQuery
+        />
       </div>
     </div>
   );
